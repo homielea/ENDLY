@@ -1,0 +1,22 @@
+{
+  "name": "endly",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Endly helps families prepare for difficult conversations about aging, end of life, wishes, inheritance, and generational handover.",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build && node scripts/inline.mjs",
+    "preview": "vite preview --port 4173 --strictPort",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "e2e": "node tests/e2e.mjs",
+    "check": "npm run typecheck && npm test && npm run build && npm run e2e"
+  },
+  "devDependencies": {
+    "jsdom": "^26.1.0",
+    "typescript": "^5.9.3",
+    "vite": "^7.3.7",
+    "vitest": "^3.2.7"
+  }
+}
