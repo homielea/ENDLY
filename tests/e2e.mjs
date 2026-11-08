@@ -223,6 +223,67 @@ await test('delete asks for confirmation, can cancel, then clears local data', a
   assert.equal(await page.getByLabel('What matters most to me').inputValue(), '');
 });
 
+await test('restore: export, delete, then paste back every note', async (page) => {
+  await page.goto(BASE + '#succession', { waitUntil: 'domcontentloaded' });
+  await page.getByLabel('My own reflections').fill('Sample: *Dad* built this <shop>\n\n> in 1987');
+  await page.getByRole('button', { name: 'Skip for now' }).click();
+  await page.getByLabel('What we agreed together').fill('Sample: meet monthly');
+  await page.goto(BASE + '#wishes', { waitUntil: 'domcontentloaded' });
+  await page.getByLabel('Notes for people I love').fill('Sample: thank you, all of you');
+  await page.goto(BASE + '#preparation', { waitUntil: 'domcontentloaded' });
+  await page.locator('#prep-will-location').fill('Sample: blue folder');
+  await waitSaved(page);
+  await page.goto(BASE + '#summary', { waitUntil: 'domcontentloaded' });
+  const md = await page.locator('#summary-markdown').inputValue();
+
+  await page.goto(BASE + '#your-data', { waitUntil: 'domcontentloaded' });
+  await page.getByRole('button', { name: /Delete all Endly notes/ }).click();
+  await page.getByRole('button', { name: 'Yes, delete everything' }).click();
+  assert.equal(await saved(page), null);
+
+  await page.getByLabel('Or paste the summary text').fill(md);
+  await page.getByRole('button', { name: 'Check this summary' }).click();
+  await page.getByRole('heading', { name: 'Found 4 notes in this summary' }).waitFor();
+  await page.getByRole('button', { name: 'Restore these notes' }).click();
+  await page.getByText('Restored 4 notes.').waitFor();
+
+  await page.reload({ waitUntil: 'domcontentloaded' });
+  await page.goto(BASE + '#succession', { waitUntil: 'domcontentloaded' });
+  assert.equal(await heading(page), 'Hear each generation', 'place in path starts fresh');
+  assert.equal(await page.getByLabel('My own reflections').inputValue(), 'Sample: *Dad* built this <shop>\n\n> in 1987');
+  await page.locator('.stepper-btn').nth(1).click();
+  assert.equal(await page.getByLabel('What we agreed together').inputValue(), 'Sample: meet monthly');
+  await page.goto(BASE + '#wishes', { waitUntil: 'domcontentloaded' });
+  assert.equal(await page.getByLabel('Notes for people I love').inputValue(), 'Sample: thank you, all of you');
+  await page.goto(BASE + '#preparation', { waitUntil: 'domcontentloaded' });
+  assert.equal(await page.locator('#prep-will-location').inputValue(), 'Sample: blue folder');
+});
+
+await test('restore: file upload, replace warning, cancel, and bad input', async (page) => {
+  await page.goto(BASE + '#wishes', { waitUntil: 'domcontentloaded' });
+  await page.getByLabel('People I want involved').fill('Sample: current note');
+  await waitSaved(page);
+  await page.goto(BASE + '#your-data', { waitUntil: 'domcontentloaded' });
+
+  await page.getByRole('button', { name: 'Check this summary' }).click();
+  await page.getByText('Paste a summary into the box first').waitFor();
+  await page.getByLabel('Or paste the summary text').fill('Shopping list: milk, eggs');
+  await page.getByRole('button', { name: 'Check this summary' }).click();
+  await page.getByText('does not look like an Endly summary').waitFor();
+
+  const file = '# Endly summary\n\n## My wishes\n\n### Wishes\n\n**People I want involved**\n\n> Sample: from file\n';
+  await page.locator('#restore-file').setInputFiles({ name: 'endly-summary.md', mimeType: 'text/markdown', buffer: Buffer.from(file) });
+  await page.getByRole('heading', { name: 'Found 1 note in this summary' }).waitFor();
+  await page.getByText('Restoring replaces the notes currently saved').waitFor();
+  await page.getByRole('button', { name: 'Cancel', exact: true }).click();
+  assert.equal((await saved(page)).wishes.people, 'Sample: current note', 'cancel keeps current notes');
+
+  await page.locator('#restore-file').setInputFiles({ name: 'again.md', mimeType: 'text/markdown', buffer: Buffer.from(file) });
+  await page.getByRole('button', { name: 'Restore these notes' }).click();
+  await page.getByText('Restored 1 note.').waitFor();
+  assert.equal((await saved(page)).wishes.people, 'Sample: from file');
+});
+
 await test('shows a clear warning when the browser blocks saving', async (page, context) => {
   await context.addInitScript(() => {
     Storage.prototype.setItem = function () { throw new DOMException('blocked', 'SecurityError'); };
@@ -288,6 +349,12 @@ await test('artifact build works inside a frame (as deployed)', async (page) => 
   assert.equal(await again.getByRole('button', { name: 'Print summary' }).count(), 0);
   assert.equal(await again.getByRole('button', { name: 'Download as Markdown' }).count(), 0);
   await again.getByText('downloading and printing are not available').waitFor();
+  const md = await again.locator('#summary-markdown').inputValue();
+  await again.getByRole('link', { name: 'Your data' }).first().click();
+  await again.getByLabel('Or paste the summary text').fill(md);
+  await again.getByRole('button', { name: 'Check this summary' }).click();
+  await again.getByRole('button', { name: 'Restore these notes' }).click();
+  await again.getByText('Restored 1 note.').waitFor();
 });
 
 await test('screenshots for review', async (page) => {

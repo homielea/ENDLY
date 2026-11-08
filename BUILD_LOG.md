@@ -43,3 +43,21 @@
 private source. Lea chose to push to the public repo. Pre-push scan: no secrets, no .env/key files.
 
 **Next action**: Lea tries the deployed app on a phone (TASKS.md P1).
+
+## 2026-11-08: restore from summary (session 1, increment 2)
+
+**Acceptance check**: write notes in several places, copy the summary, delete everything, restore
+by paste and by file. Every note returns under the same path, step, and label, including text with
+Markdown symbols, quote marks, and blank lines.
+
+**Built**
+- `src/restore.ts`: `parseSummary()` reads the Markdown that `toMarkdown()` writes. It restores notes,
+  skipped steps, wishes, and preparation notes, and ignores unknown headings and labels. Inputs over
+  about 1 MB are rejected.
+- "Your data" page: new "Restore notes from a summary" section (file picker or paste), an in-page
+  confirmation with a count, a warning when it would replace existing notes, and Cancel.
+
+**Tests**: 14 unit tests (5 new restore tests) and 18 browser tests (2 new, plus restore inside the
+frame). All pass on the first run.
+
+**Next action**: Lea tries the deployed app on a phone, including moving notes between two browsers.

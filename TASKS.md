@@ -32,7 +32,9 @@ Priority order. Each task has an observable acceptance check. `[x]` = done and v
 - [ ] Verify the deployed Artifact on a real phone (Lea), including that notes persist after
       closing and reopening the page.
 - [ ] Optional per-section "clear" for wishes and preparation notes (deletion is all-or-nothing today).
-- [ ] Optional import of a previously exported summary (restore on a new device).
+- [x] **Restore from a summary** (move notes to another device or browser). Paste or choose the
+      exported Markdown on "Your data"; shows how many notes it found; asks before replacing; rejects
+      non-summaries. Place in each path is not restored. *(unit round-trip + e2e paste, file, framed)*
 - [ ] Larger-text toggle for people who prefer it, beyond browser zoom.
 - [ ] Usability session with 2–3 people from each primary audience; revise question wording.
 

@@ -24,6 +24,7 @@ import {
   type State,
 } from './store';
 import { buildSummary, hasAnyContent, toMarkdown, SUMMARY_DISCLAIMER, formatDate } from './summary';
+import { parseSummary, MAX_RESTORE_CHARS } from './restore';
 
 // ---------------------------------------------------------------------------
 // State and persistence
@@ -639,7 +640,7 @@ function renderSummary(): HTMLElement[] {
 
   return [
     h('h1', { tabindex: '-1', class: 'no-print' }, 'Summary and export'),
-    h('p', { class: 'lede no-print' }, 'Everything you have written, in one place. Copy it into a document, email it to yourself, or share it only with the people you choose.'),
+    h('p', { class: 'lede no-print' }, 'Everything you have written, in one place. Copy it into a document, email it to yourself, or share it only with the people you choose. You can also use this copy to restore your notes later, on the Your data page.'),
     hasAnyContent(state) ? null : h('div', { class: 'notice no-print' }, h('p', {}, 'Nothing has been written yet. This summary fills in as you add notes.')),
     framed
       ? h('p', { class: 'hint no-print' }, 'In this view, downloading and printing are not available. Copy the summary, then paste it wherever you keep important notes.')
@@ -654,6 +655,101 @@ function renderSummary(): HTMLElement[] {
 // ---------------------------------------------------------------------------
 // Your data
 // ---------------------------------------------------------------------------
+
+function restoreSection(): HTMLElement {
+  const message = h('div', { role: 'status', 'aria-live': 'polite' });
+  const pasteArea = h('textarea', { id: 'restore-text', rows: 6, 'aria-describedby': 'restore-text-hint', spellcheck: 'false' });
+  const fileInput = h('input', { type: 'file', id: 'restore-file', accept: '.md,.markdown,.txt,text/markdown,text/plain', class: 'file-input' });
+  const confirmBox = h('div', { class: 'confirm confirm-calm', hidden: true, tabindex: '-1', id: 'restore-confirm', 'aria-labelledby': 'restore-confirm-title' });
+  let pending: ReturnType<typeof parseSummary> | null = null;
+
+  const showMessage = (text: string, warn = false) => {
+    message.replaceChildren(h('div', { class: warn ? 'notice notice-warn' : 'notice' }, h('p', {}, text)));
+  };
+
+  const check = (text: string) => {
+    confirmBox.hidden = true;
+    pending = parseSummary(text);
+    if (!pending.ok) {
+      showMessage(pending.error, true);
+      return;
+    }
+    message.replaceChildren();
+    const replacing = hasAnyContent(state);
+    confirmBox.replaceChildren(
+      h('h3', { id: 'restore-confirm-title' }, `Found ${pending.found} ${pending.found === 1 ? 'note' : 'notes'} in this summary`),
+      h('p', {}, replacing
+        ? 'Restoring replaces the notes currently saved in this browser. If you want to keep them, copy them from the Summary page first.'
+        : 'They will be saved in this browser. Your place in each path will start at the beginning.'),
+      h('div', { class: 'controls controls-start' },
+        button('Restore these notes', restore, 'btn btn-primary'),
+        button('Cancel', () => {
+          confirmBox.hidden = true;
+          pending = null;
+          checkButton.focus();
+        }, 'btn'),
+      ),
+    );
+    confirmBox.hidden = false;
+    confirmBox.focus();
+  };
+
+  const restore = () => {
+    if (!pending || !pending.ok) return;
+    const found = pending.found;
+    const restored = pending.state;
+    restored.route = { view: 'data' };
+    state = restored;
+    pending = null;
+    saveNow();
+    confirmBox.hidden = true;
+    pasteArea.value = '';
+    fileInput.value = '';
+    showMessage(saveStatus === 'failed'
+      ? `Restored ${found} ${found === 1 ? 'note' : 'notes'} on screen, but this browser would not save them. Copy them somewhere safe before closing the page.`
+      : `Restored ${found} ${found === 1 ? 'note' : 'notes'}. You can find them in each path, in My wishes, and in Preparation notes.`, saveStatus === 'failed');
+    checkButton.focus();
+  };
+
+  const checkButton = button('Check this summary', () => {
+    if (!pasteArea.value.trim()) {
+      showMessage('Paste a summary into the box first, or choose a summary file.', true);
+      pasteArea.focus();
+      return;
+    }
+    check(pasteArea.value);
+  }, 'btn');
+
+  fileInput.addEventListener('change', () => {
+    const file = fileInput.files?.[0];
+    if (!file) return;
+    if (file.size > MAX_RESTORE_CHARS * 4) {
+      showMessage('This file is too large to be an Endly summary.', true);
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => check(String(reader.result ?? ''));
+    reader.onerror = () => showMessage('Endly could not read that file. Try copying its text into the box instead.', true);
+    reader.readAsText(file);
+  });
+
+  return h('section', { class: 'stack prose', 'aria-labelledby': 'restore-heading' },
+    h('h2', { id: 'restore-heading' }, 'Restore notes from a summary'),
+    h('p', {}, 'Moving to another device or browser? On the old one, copy your summary from the Summary page. Then paste it here, or choose the file you saved. Endly shows what it found and asks before replacing anything.'),
+    h('div', { class: 'field' },
+      h('label', { for: 'restore-file' }, 'Choose a saved summary file'),
+      fileInput,
+    ),
+    h('div', { class: 'field' },
+      h('label', { for: 'restore-text' }, 'Or paste the summary text'),
+      h('p', { class: 'hint', id: 'restore-text-hint' }, 'It starts with “# Endly summary”. Your place in each path is not restored, only what you wrote.'),
+      pasteArea,
+    ),
+    h('div', { class: 'controls controls-start' }, checkButton),
+    confirmBox,
+    message,
+  );
+}
 
 function renderData(): HTMLElement[] {
   const result = h('div', { role: 'status', 'aria-live': 'polite' });
@@ -717,6 +813,7 @@ function renderData(): HTMLElement[] {
         h('li', {}, 'Endly never sends messages, letters, or legacy notes to anyone.'),
       ),
     ),
+    restoreSection(),
     h('section', { class: 'stack prose' },
       h('h2', {}, 'Delete your notes'),
       h('p', {}, 'You can remove everything Endly has saved in this browser at any time.'),
