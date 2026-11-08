@@ -4,7 +4,10 @@ _Updated after each increment. Distinguishes deployed, pushed, and local-only wo
 
 ## Current state
 - App: first release complete; all P0 checks pass locally (`npm run check`).
-- Deployed: private claude.ai Artifact (URL below once published).
+- Deployed: private claude.ai Artifact, version 1, built from commit 19e5da9's app code:
+  https://claude.ai/artifact/WvuT22XgnbTdBBGRufTacX
+  (only Lea can open it while signed in; sharing is controlled from the page's Share menu).
+  Verified by reading the published page back. It matches `dist/artifact.html`.
 - Pushed: not yet (see blocker).
 - Local-only: everything in this repository until the push happens.
 

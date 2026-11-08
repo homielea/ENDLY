@@ -272,6 +272,24 @@ await test('phone layout: no sideways scroll, large targets, nav works', async (
   assert.equal(await heading(page), 'Preparation notes');
 }, { ...devices['iPhone 13'] });
 
+await test('artifact build works inside a frame (as deployed)', async (page) => {
+  await page.setContent(`<iframe id="f" src="${BASE}artifact.html" style="width:420px;height:900px"></iframe>`);
+  const frame = page.frameLocator('#f');
+  await frame.getByRole('heading', { name: 'Hard conversations, gently prepared' }).waitFor();
+  await frame.getByRole('link', { name: 'My wishes' }).first().click();
+  await frame.getByLabel('What matters most to me').fill('Sample: framed note');
+  await frame.getByRole('status').filter({ hasText: 'Saved on this device' }).first().waitFor();
+  await page.setContent(`<iframe id="f" src="${BASE}artifact.html" style="width:420px;height:900px"></iframe>`);
+  const again = page.frameLocator('#f');
+  await again.getByRole('heading', { name: 'My wishes' }).waitFor();
+  assert.equal(await again.getByLabel('What matters most to me').inputValue(), 'Sample: framed note');
+  await again.getByRole('link', { name: 'Summary' }).first().click();
+  await again.getByRole('button', { name: 'Copy summary' }).waitFor();
+  assert.equal(await again.getByRole('button', { name: 'Print summary' }).count(), 0);
+  assert.equal(await again.getByRole('button', { name: 'Download as Markdown' }).count(), 0);
+  await again.getByText('downloading and printing are not available').waitFor();
+});
+
 await test('screenshots for review', async (page) => {
   await page.goto(BASE + '#home', { waitUntil: 'domcontentloaded' });
   await page.screenshot({ path: 'test-results/home-desktop.png', fullPage: true });

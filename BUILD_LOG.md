@@ -33,4 +33,10 @@
 - First path card had a gap above its step list; card buttons wrapped awkwardly. Fixed layout;
   buttons now read "Begin"/"Resume" with the path name for screen readers.
 
+**Deployment**
+- Published `dist/artifact.html` as a private claude.ai Artifact:
+  https://claude.ai/artifact/WvuT22XgnbTdBBGRufTacX (version 1). Read back and confirmed identical.
+- Added e2e check that loads the Artifact build inside an iframe: Print/Download hidden,
+  copy available, notes and last view restored in a fresh frame with no hash. 16/16 pass.
+
 **Next action**: Lea decides on repository visibility so the source can be pushed.
