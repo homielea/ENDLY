@@ -8,13 +8,14 @@ _Updated after each increment. Distinguishes deployed, pushed, and local-only wo
   https://claude.ai/artifact/WvuT22XgnbTdBBGRufTacX
   (only Lea can open it while signed in; sharing is controlled from the page's Share menu).
   Verified by reading the published page back. It matches `dist/artifact.html`.
-- Pushed: not yet (see blocker).
-- Local-only: everything in this repository until the push happens.
+- Pushed: branch `claude/blissful-ritchie-2adold` on https://github.com/homielea/ENDLY.
+- Local-only: nothing (dist/ and node_modules/ are build outputs and are gitignored).
 
-## Blocker
-`homielea/ENDLY` is a public repository. The brief requires private source, so the code has
-not been pushed. To unblock: GitHub → homielea/ENDLY → Settings → General → Danger Zone →
-Change visibility → Private. Then push branch `claude/blissful-ritchie-2adold`.
+## Repository visibility (decision on record)
+`homielea/ENDLY` is a **public** repository. The original brief asked for private source;
+on 2026-11-08 Lea chose to push to the public repo anyway. The code has no secrets and no
+personal data. To make it private later: GitHub → homielea/ENDLY → Settings → General →
+Danger Zone → Change visibility → Private. The deployed app is unaffected by repo visibility.
 
 ## How to resume
 1. `npm install && npm run check` (needs Playwright + Chromium for the e2e step).

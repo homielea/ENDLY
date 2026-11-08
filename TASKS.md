@@ -25,8 +25,8 @@ Priority order. Each task has an observable acceptance check. `[x]` = done and v
       focus moves to page heading on navigation. *(e2e)*
 - [x] **Production build** to a single self-contained HTML file.
 - [x] **Protected deployment.** Private claude.ai Artifact (see HANDOFF.md for URL).
-- [ ] **Push source to a private GitHub repo.** Blocked: `homielea/ENDLY` is public. Needs Lea
-      to make it private (or approve another option). See HANDOFF.md.
+- [x] **Push source to GitHub.** Pushed to `homielea/ENDLY`, which is public by Lea's decision
+      (brief originally asked for private). See HANDOFF.md.
 
 ## P1: next
 - [ ] Verify the deployed Artifact on a real phone (Lea), including that notes persist after

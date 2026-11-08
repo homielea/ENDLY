@@ -39,4 +39,7 @@
 - Added e2e check that loads the Artifact build inside an iframe: Print/Download hidden,
   copy available, notes and last view restored in a fresh frame with no hash. 16/16 pass.
 
-**Next action**: Lea decides on repository visibility so the source can be pushed.
+**Repository decision**: asked Lea, because `homielea/ENDLY` is public and the brief wanted
+private source. Lea chose to push to the public repo. Pre-push scan: no secrets, no .env/key files.
+
+**Next action**: Lea tries the deployed app on a phone (TASKS.md P1).
