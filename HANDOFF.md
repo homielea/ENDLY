@@ -3,8 +3,8 @@
 _Updated after each increment. Distinguishes deployed, pushed, and local-only work._
 
 ## Current state
-- App: first release complete; all P0 checks pass locally (`npm run check`).
-- Deployed: private claude.ai Artifact, version 1, built from commit 19e5da9's app code:
+- App: first release plus restore from summary; all checks pass (`npm run check`: 14 unit, 18 browser).
+- Deployed: private claude.ai Artifact, version 2 (adds restore from summary), built from commit 09a93aa:
   https://claude.ai/artifact/WvuT22XgnbTdBBGRufTacX
   (only Lea can open it while signed in; sharing is controlled from the page's Share menu).
   Verified by reading the published page back. It matches `dist/artifact.html`.
