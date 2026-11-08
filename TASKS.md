@@ -31,11 +31,14 @@ Priority order. Each task has an observable acceptance check. `[x]` = done and v
 ## P1: next
 - [ ] Verify the deployed Artifact on a real phone (Lea), including that notes persist after
       closing and reopening the page.
-- [ ] Optional per-section "clear" for wishes and preparation notes (deletion is all-or-nothing today).
+- [x] **Clear one part at a time.** "Start this path over…" per path, "Clear all my wishes…",
+      and "Clear “<section>”…" per preparation category. Each confirms in the page, has Cancel, and
+      leaves everything else untouched. *(unit + e2e)*
 - [x] **Restore from a summary** (move notes to another device or browser). Paste or choose the
       exported Markdown on "Your data"; shows how many notes it found; asks before replacing; rejects
       non-summaries. Place in each path is not restored. *(unit round-trip + e2e paste, file, framed)*
-- [ ] Larger-text toggle for people who prefer it, beyond browser zoom.
+- [x] **Larger text** button in the header (125%), remembered on this device, kept through
+      restore; no sideways scroll on a phone with it on. *(unit + e2e)*
 - [ ] Usability session with 2–3 people from each primary audience; revise question wording.
 
 ## P2: later (needs a product decision first)

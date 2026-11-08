@@ -210,6 +210,7 @@ await test('delete asks for confirmation, can cancel, then clears local data', a
   await page.evaluate(() => localStorage.setItem('unrelated-app', 'keep'));
   await page.getByRole('link', { name: 'Your data' }).first().click();
   assert.match(await page.locator('main').innerText(), /stored only in this web browser/);
+  assert.equal(await page.locator('#delete-confirm').isVisible(), false, 'confirmation hidden until asked');
   await page.getByRole('button', { name: /Delete all Endly notes/ }).click();
   await page.getByRole('button', { name: 'Cancel, keep my notes' }).click();
   assert.notEqual(await saved(page), null, 'cancel keeps data');
@@ -284,6 +285,71 @@ await test('restore: file upload, replace warning, cancel, and bad input', async
   assert.equal((await saved(page)).wishes.people, 'Sample: from file');
 });
 
+await test('clear one part at a time, each with confirmation', async (page) => {
+  await page.goto(BASE + '#family', { waitUntil: 'domcontentloaded' });
+  await page.getByLabel('My own reflections').fill('Sample: family note');
+  await page.getByRole('button', { name: 'Next step', exact: true }).click();
+  await page.goto(BASE + '#legacy', { waitUntil: 'domcontentloaded' });
+  await page.getByLabel('My own reflections').fill('Sample: legacy note');
+  await page.goto(BASE + '#wishes', { waitUntil: 'domcontentloaded' });
+  await page.getByLabel('People I want involved').fill('Sample: Sam');
+  await page.goto(BASE + '#preparation', { waitUntil: 'domcontentloaded' });
+  await page.locator('#prep-will-location').fill('Sample: blue folder');
+  await page.locator('#prep-advisers-contact').fill('Sample: notary');
+  await waitSaved(page);
+
+  // Preparation: one category only, cancel first.
+  await page.getByRole('button', { name: 'Clear “Will”…' }).click();
+  await page.getByRole('button', { name: 'Cancel', exact: true }).click();
+  assert.equal(await page.locator('#prep-will-location').inputValue(), 'Sample: blue folder');
+  await page.getByRole('button', { name: 'Clear “Will”…' }).click();
+  await page.getByRole('button', { name: 'Yes, clear this section' }).click();
+  await page.getByText('The “Will” notes have been cleared.').waitFor();
+  assert.equal(await page.locator('#prep-will-location').inputValue(), '');
+  assert.equal(await page.locator('#prep-advisers-contact').inputValue(), 'Sample: notary');
+
+  // Wishes.
+  await page.goto(BASE + '#wishes', { waitUntil: 'domcontentloaded' });
+  await page.getByRole('button', { name: 'Clear all my wishes…' }).click();
+  await page.getByRole('button', { name: 'Yes, clear my wishes' }).click();
+  await page.getByText('Your wishes have been cleared.').waitFor();
+  assert.equal(await page.getByLabel('People I want involved').inputValue(), '');
+
+  // One path.
+  await page.goto(BASE + '#family', { waitUntil: 'domcontentloaded' });
+  assert.equal(await heading(page), 'Explore values');
+  await page.getByRole('button', { name: 'Start this path over…' }).click();
+  await page.getByRole('button', { name: 'Yes, clear this path' }).click();
+  await page.getByText('has been cleared. You are back at step 1.').waitFor();
+  assert.equal(await heading(page), 'Prepare the conversation');
+  assert.equal(await page.getByLabel('My own reflections').inputValue(), '');
+
+  await page.reload({ waitUntil: 'domcontentloaded' });
+  const s = await saved(page);
+  assert.equal(s.paths.family.steps.prepare.reflection, '');
+  assert.equal(s.paths.legacy.steps['what-matters'].reflection, 'Sample: legacy note', 'other path untouched');
+  assert.equal(s.prep.advisers.contact, 'Sample: notary', 'other prep untouched');
+});
+
+await test('larger text: toggles, persists, survives restore', async (page) => {
+  const base = await page.evaluate(() => parseFloat(getComputedStyle(document.body).fontSize));
+  const toggle = page.getByRole('button', { name: 'Larger text' });
+  assert.equal(await toggle.getAttribute('aria-pressed'), 'false');
+  await toggle.click();
+  assert.equal(await toggle.getAttribute('aria-pressed'), 'true');
+  const big = await page.evaluate(() => parseFloat(getComputedStyle(document.body).fontSize));
+  assert.ok(big >= base * 1.2, `text grew from ${base} to ${big}`);
+  await page.reload({ waitUntil: 'domcontentloaded' });
+  assert.equal(await page.getByRole('button', { name: 'Larger text' }).getAttribute('aria-pressed'), 'true');
+  await page.goto(BASE + '#your-data', { waitUntil: 'domcontentloaded' });
+  await page.getByLabel('Or paste the summary text').fill('# Endly summary\n\n## My wishes\n\n### Wishes\n\n**People I want involved**\n\n> Sam');
+  await page.getByRole('button', { name: 'Check this summary' }).click();
+  await page.getByRole('button', { name: 'Restore these notes' }).click();
+  assert.equal(await page.getByRole('button', { name: 'Larger text' }).getAttribute('aria-pressed'), 'true');
+  await page.getByRole('button', { name: 'Larger text' }).click();
+  assert.equal((await saved(page)).prefs.textSize, 'standard');
+});
+
 await test('shows a clear warning when the browser blocks saving', async (page, context) => {
   await context.addInitScript(() => {
     Storage.prototype.setItem = function () { throw new DOMException('blocked', 'SecurityError'); };
@@ -327,6 +393,13 @@ await test('phone layout: no sideways scroll, large targets, nav works', async (
         .filter((el) => el.getBoundingClientRect().height < 44)
         .map((el) => el.textContent));
     assert.deepEqual(small, [], `${hash} small targets`);
+  }
+  await page.goto(BASE + '#home', { waitUntil: 'domcontentloaded' });
+  await page.getByRole('button', { name: 'Larger text' }).tap();
+  for (const hash of ['#home', '#family', '#wishes', '#preparation', '#summary', '#your-data']) {
+    await page.goto(BASE + hash, { waitUntil: 'domcontentloaded' });
+    const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+    assert.ok(overflow <= 0, `${hash} with larger text overflows by ${overflow}px`);
   }
   await page.goto(BASE + '#home', { waitUntil: 'domcontentloaded' });
   await page.getByRole('link', { name: 'Preparation' }).first().tap();

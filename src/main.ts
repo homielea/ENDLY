@@ -20,11 +20,16 @@ import {
   stepHasNotes,
   stepStatus,
   STATUS_LABEL,
+  resetPath,
+  clearWishes,
+  clearPrepCategory,
+  pathHasNotes,
   type Route,
   type State,
 } from './store';
 import { buildSummary, hasAnyContent, toMarkdown, SUMMARY_DISCLAIMER, formatDate } from './summary';
 import { parseSummary, MAX_RESTORE_CHARS } from './restore';
+import type { PrepKey } from './content';
 
 // ---------------------------------------------------------------------------
 // State and persistence
@@ -190,6 +195,23 @@ function onHashChange(): void {
 // ---------------------------------------------------------------------------
 
 const app = document.getElementById('app')!;
+
+/** Larger text scales every rem-based size on the page, and is remembered on this device. */
+const textToggle = h('button', {
+  type: 'button',
+  class: 'text-toggle',
+  onclick: () => {
+    state.prefs.textSize = state.prefs.textSize === 'large' ? 'standard' : 'large';
+    applyTextSize();
+    persistRoute();
+  },
+}, h('span', { class: 'text-toggle-mark', 'aria-hidden': 'true' }, 'A', h('span', {}, 'A')), 'Larger text');
+
+function applyTextSize(): void {
+  const large = state.prefs.textSize === 'large';
+  document.documentElement.classList.toggle('text-large', large);
+  textToggle.setAttribute('aria-pressed', String(large));
+}
 const main = h('main', { id: 'main', tabindex: '-1' });
 
 const NAV: { label: string; route: Route }[] = [
@@ -240,6 +262,7 @@ app.replaceChildren(
         },
       }, h('span', { class: 'brand-mark', 'aria-hidden': 'true' }), 'Endly'),
       h('nav', { 'aria-label': 'Main' }, h('ul', { class: 'nav-list' }, navLinks.map((a) => h('li', {}, a)))),
+      textToggle,
     ),
   ),
   main,
@@ -331,6 +354,46 @@ function textArea(opts: {
 
 function button(label: string, onClick: () => void, cls = 'btn', extra: Record<string, unknown> = {}): HTMLButtonElement {
   return h('button', { type: 'button', class: cls, onclick: onClick, ...extra }, label);
+}
+
+/**
+ * A quiet button that opens an in-page confirmation. Nothing is removed until
+ * the person confirms; Cancel returns focus to the button.
+ */
+function clearControl(opts: {
+  id: string;
+  buttonLabel: string;
+  title: string;
+  body: string;
+  confirmLabel: string;
+  done: string;
+  onConfirm: () => void;
+}): HTMLElement {
+  const box = h('div', { class: 'confirm', hidden: true, tabindex: '-1', id: `${opts.id}-confirm`, 'aria-labelledby': `${opts.id}-title` });
+  const open = button(opts.buttonLabel, () => {
+    box.hidden = false;
+    open.hidden = true;
+    box.focus();
+  }, 'btn btn-quiet btn-small');
+  box.append(
+    h('h3', { id: `${opts.id}-title` }, opts.title),
+    h('p', {}, opts.body),
+    h('div', { class: 'controls controls-start' },
+      button(opts.confirmLabel, () => {
+        flushSave();
+        opts.onConfirm();
+        saveNow();
+        flash = saveStatus === 'failed' ? `${opts.done} This browser did not save the change.` : opts.done;
+        render(true);
+      }, 'btn btn-danger'),
+      button('Cancel', () => {
+        box.hidden = true;
+        open.hidden = false;
+        open.focus();
+      }, 'btn'),
+    ),
+  );
+  return h('div', { class: 'clear-control' }, open, box);
 }
 
 // ---------------------------------------------------------------------------
@@ -479,6 +542,7 @@ function renderPath(path: GuidedPath): HTMLElement[] {
     }, '← All paths')),
     h('p', { class: 'eyebrow' }, path.title),
     stepper,
+    flashNotice(),
     storageWarning(),
     h('article', { class: 'workspace', 'aria-labelledby': 'step-title' },
       h('p', { class: 'step-count' }, `Step ${index + 1} of ${path.steps.length}`),
@@ -514,6 +578,20 @@ function renderPath(path: GuidedPath): HTMLElement[] {
       h('p', { class: 'fine' },
         'Moving to the next step only moves you along. It does not mean anything is decided, or that your family agrees.'),
     ),
+    pathHasNotes(state, path.id) || progress.current > 0
+      ? clearControl({
+          id: `reset-${path.id}`,
+          buttonLabel: 'Start this path over…',
+          title: `Start “${path.title}” over?`,
+          body: 'This clears the notes you wrote in all four steps of this path and takes you back to step 1. Your other paths, wishes, and preparation notes stay as they are.',
+          confirmLabel: 'Yes, clear this path',
+          done: `“${path.title}” has been cleared. You are back at step 1.`,
+          onConfirm: () => {
+            resetPath(state, path.id);
+            state.paths[path.id].started = true;
+          },
+        })
+      : null,
   ].filter(Boolean) as HTMLElement[];
 }
 
@@ -526,6 +604,7 @@ function renderWishes(): HTMLElement[] {
     h('h1', { tabindex: '-1' }, 'My wishes'),
     h('p', { class: 'lede' }, 'Write in your own words. Change anything whenever your feelings change. Leaving a section empty is fine.'),
     h('p', { class: 'caution' }, 'These notes are for you and the people you choose to share them with. They are not a legal will or a medical directive, and Endly never sends them to anyone.'),
+    flashNotice(),
     storageWarning(),
     h('form', { class: 'notes', onsubmit: (e: Event) => e.preventDefault(), 'aria-label': 'My wishes' },
       WISH_FIELDS.map((w) =>
@@ -540,6 +619,15 @@ function renderWishes(): HTMLElement[] {
       ),
       saveStatusLine(),
     ),
+    clearControl({
+      id: 'clear-wishes',
+      buttonLabel: 'Clear all my wishes…',
+      title: 'Clear everything on this page?',
+      body: 'This empties all five wishes sections. Your conversation notes and preparation notes stay as they are.',
+      confirmLabel: 'Yes, clear my wishes',
+      done: 'Your wishes have been cleared. You can write new ones whenever you like.',
+      onConfirm: () => clearWishes(state),
+    }),
   ].filter(Boolean) as HTMLElement[];
 }
 
@@ -554,6 +642,7 @@ function renderPreparation(): HTMLElement[] {
     h('div', { class: 'notice notice-label', role: 'note' },
       h('p', {}, h('strong', {}, 'These are preparation notes only. '),
         'Endly does not store documents and is not a secure vault. Do not write passwords, PINs, or account numbers here. Write where something is, not what it says.')),
+    flashNotice(),
     storageWarning(),
     h('form', { class: 'prep', onsubmit: (e: Event) => e.preventDefault(), 'aria-label': 'Preparation notes' },
       PREP_CATEGORIES.map((c) =>
@@ -569,6 +658,15 @@ function renderPreparation(): HTMLElement[] {
               onInput: (v) => { state.prep[c.key][f.key] = v; },
             }),
           ),
+          clearControl({
+            id: `clear-prep-${c.key}`,
+            buttonLabel: `Clear “${c.label}”…`,
+            title: `Clear the “${c.label}” notes?`,
+            body: 'This empties the three boxes in this section only. Everything else stays as it is.',
+            confirmLabel: 'Yes, clear this section',
+            done: `The “${c.label}” notes have been cleared.`,
+            onConfirm: () => clearPrepCategory(state, c.key as PrepKey),
+          }),
         ),
       ),
       saveStatusLine(),
@@ -699,6 +797,7 @@ function restoreSection(): HTMLElement {
     const found = pending.found;
     const restored = pending.state;
     restored.route = { view: 'data' };
+    restored.prefs = { ...state.prefs };
     state = restored;
     pending = null;
     saveNow();
@@ -863,6 +962,7 @@ function render(moveFocus: boolean): void {
     default:
       children = renderHome();
   }
+  applyTextSize();
   main.dataset.view = route.view;
   main.replaceChildren(h('div', { class: 'wrap view' }, children));
   document.title = title;

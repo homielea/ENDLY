@@ -39,7 +39,14 @@ export interface State {
   paths: Record<PathId, PathProgress>;
   wishes: Record<WishKey, string>;
   prep: Record<PrepKey, Record<PrepField, string>>;
+  prefs: Prefs;
   updatedAt: string | null;
+}
+
+export type TextSize = 'standard' | 'large';
+
+export interface Prefs {
+  textSize: TextSize;
 }
 
 export interface StorageLike {
@@ -71,7 +78,7 @@ export function emptyState(): State {
     for (const f of PREP_FIELDS) fields[f.key] = '';
     prep[c.key] = fields;
   }
-  return { version: 1, route: { view: 'home' }, paths, wishes, prep, updatedAt: null };
+  return { version: 1, route: { view: 'home' }, paths, wishes, prep, prefs: { textSize: 'standard' }, updatedAt: null };
 }
 
 const str = (v: unknown): string => (typeof v === 'string' ? v : '');
@@ -110,6 +117,7 @@ export function normalize(raw: unknown): State {
   for (const c of PREP_CATEGORIES) {
     for (const f of PREP_FIELDS) state.prep[c.key][f.key] = str(r.prep?.[c.key]?.[f.key]);
   }
+  state.prefs.textSize = r.prefs?.textSize === 'large' ? 'large' : 'standard';
   state.updatedAt = typeof r.updatedAt === 'string' ? r.updatedAt : null;
   return state;
 }
@@ -190,3 +198,20 @@ export const STATUS_LABEL: Record<StepStatus, string> = {
   skipped: 'Skipped for now',
   empty: 'Not started',
 };
+
+/** Remove every note in one path and start it again from step 1. */
+export function resetPath(state: State, id: PathId): void {
+  state.paths[id] = emptyState().paths[id];
+}
+
+export function clearWishes(state: State): void {
+  state.wishes = emptyState().wishes;
+}
+
+export function clearPrepCategory(state: State, key: PrepKey): void {
+  state.prep[key] = emptyState().prep[key];
+}
+
+export function pathHasNotes(state: State, id: PathId): boolean {
+  return Object.values(state.paths[id].steps).some((n) => stepHasNotes(n) || n.skipped);
+}

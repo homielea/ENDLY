@@ -82,8 +82,16 @@
   box-sizing: border-box;
 }
 
+/* Components set display:grid/flex; this keeps the hidden attribute authoritative. */
+[hidden] {
+  display: none !important;
+}
+
 html {
   -webkit-text-size-adjust: 100%;
+}
+html.text-large {
+  font-size: 125%;
 }
 
 body {
@@ -241,7 +249,7 @@ a {
   }
   .nav-list {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .nav-link {
     width: 100%;
@@ -723,6 +731,54 @@ textarea.mono {
   border-radius: var(--radius);
   background: var(--surface);
 }
+.clear-control {
+  display: grid;
+  gap: 0.75rem;
+  justify-items: start;
+}
+.btn-small {
+  font-size: var(--step--1);
+  font-weight: 400;
+  color: var(--ink-soft);
+}
+.btn-small:hover:not(:disabled) {
+  color: var(--danger);
+  background: transparent;
+}
+
+.text-toggle {
+  -webkit-tap-highlight-color: transparent;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: var(--tap);
+  padding: 0 1rem;
+  font: inherit;
+  font-size: var(--step--1);
+  font-weight: 700;
+  border: 1.5px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--ink);
+  cursor: pointer;
+}
+.text-toggle:hover {
+  border-color: var(--sage);
+}
+.text-toggle[aria-pressed='true'] {
+  background: var(--sage-deep);
+  border-color: var(--sage-deep);
+  color: var(--on-sage);
+}
+.text-toggle-mark {
+  font-family: var(--font-display);
+  font-size: 0.85rem;
+  line-height: 1;
+}
+.text-toggle-mark span {
+  font-size: 1.3rem;
+}
+
 .confirm-calm {
   border-color: var(--sage-deep);
 }

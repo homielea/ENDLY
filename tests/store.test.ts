@@ -87,3 +87,38 @@ describe('store', () => {
     expect(stepStatus(n)).toBe('notes');
   });
 });
+
+import { resetPath, clearWishes, clearPrepCategory, pathHasNotes } from '../src/store';
+
+describe('partial clearing', () => {
+  it('clears only the chosen part', () => {
+    const s = emptyState();
+    s.paths.family.steps.values.reflection = 'a';
+    s.paths.family.current = 2;
+    s.paths.family.started = true;
+    s.paths.legacy.steps.remembrance.agreed = 'b';
+    s.wishes.people = 'c';
+    s.prep.will.location = 'd';
+    s.prep.business.notes = 'e';
+
+    resetPath(s, 'family');
+    expect(s.paths.family.current).toBe(0);
+    expect(s.paths.family.started).toBe(false);
+    expect(pathHasNotes(s, 'family')).toBe(false);
+    expect(s.paths.legacy.steps.remembrance.agreed).toBe('b');
+
+    clearPrepCategory(s, 'will');
+    expect(s.prep.will.location).toBe('');
+    expect(s.prep.business.notes).toBe('e');
+    expect(s.wishes.people).toBe('c');
+
+    clearWishes(s);
+    expect(s.wishes.people).toBe('');
+    expect(s.prep.business.notes).toBe('e');
+  });
+
+  it('keeps a valid text size preference only', () => {
+    expect(normalize({ prefs: { textSize: 'large' } }).prefs.textSize).toBe('large');
+    expect(normalize({ prefs: { textSize: '<huge>' } }).prefs.textSize).toBe('standard');
+  });
+});

@@ -61,3 +61,29 @@ Markdown symbols, quote marks, and blank lines.
 frame). All pass on the first run.
 
 **Next action**: Lea tries the deployed app on a phone, including moving notes between two browsers.
+
+## 2026-11-08: clear one part at a time + larger text (session 1, increment 3)
+
+**Acceptance checks**
+- Clearing a path, the wishes, or one preparation category removes only that part, after an
+  in-page confirmation, and Cancel changes nothing.
+- "Larger text" enlarges all text by 25%, is remembered after reload, survives restore, and causes
+  no sideways scrolling on a phone.
+
+**Built**
+- `resetPath`, `clearWishes`, `clearPrepCategory`, `pathHasNotes` in `src/store.ts`; new
+  `prefs.textSize` in saved state (defaults to standard; unknown values ignored).
+- Reusable `clearControl()` in `src/main.ts` (quiet button → confirmation → message after clearing).
+- Header "Larger text" toggle button (`aria-pressed`).
+
+**Failure found and fixed (real bug)**
+- Component styles (`.confirm { display: grid }`) overrode the `hidden` attribute, so in the
+  standalone build every confirmation box was always visible. The claude.ai page hid this because
+  its wrapper adds `[hidden]{display:none!important}`. Added that rule to `styles.css`, and the
+  delete test now asserts the confirmation is hidden until asked for.
+- At larger text on a phone the nav fell to one column and filled the first screen; now always
+  two columns on narrow screens.
+
+**Tests**: 16 unit, 20 browser. All pass.
+
+**Next action**: Lea tries the app on a phone (larger text, clearing, restore between two browsers).
